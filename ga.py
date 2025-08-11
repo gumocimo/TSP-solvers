@@ -3,58 +3,85 @@ Genetic Algorithm components for TSP solver.
 This module contains all core components and algorithms for solving TSP using GA.
 
 Author: gumocimo
-Date: 07/08/2025
+Date: 11/08/2025
 """
 
-import math
 import random
 import copy
+import numpy as np
 from abc import ABC, abstractmethod
 
 
+# ============= City Management =============
 def get_fixed_cities():
     """Return a fixed set of cities for testing.
 
     Returns:
-        list: List of (x, y) coordinate tuples for 10 cities
+        np.ndarray: Array of (x, y) coordinates for 10 cities
     """
-    return [
+    cities = [
         (60, 200), (180, 200), (80, 180), (140, 180), (20, 160),
         (100, 160), (200, 160), (140, 140), (40, 120), (100, 120)
     ]
+    return np.array(cities)
 
 
+def generate_cities(num_cities, width=100, height=100, seed=None):
+    """Generate random cities in a given space.
+
+    Args:
+        num_cities: Number of cities to generate
+        width: Width of the grid (default: 100)
+        height: Height of the grid (default: 100)
+        seed: Random seed for reproducibility (default: None)
+
+    Returns:
+        np.ndarray: Array of (x, y) coordinates
+    """
+    if seed is not None:
+        random.seed(seed)
+        np.random.seed(seed)
+
+    cities = []
+    for _ in range(num_cities):
+        x = random.randint(0, width)
+        y = random.randint(0, height)
+        cities.append((x, y))
+
+    return np.array(cities)
+
+
+# ============= Distance Calculations =============
 def euclidean_distance(city1, city2):
     """Compute Euclidean distance between two cities.
 
     Args:
-        city1: Tuple of (x, y) coordinates
-        city2: Tuple of (x, y) coordinates
+        city1: Array of (x, y) coordinates
+        city2: Array of (x, y) coordinates
 
     Returns:
         float: Euclidean distance
     """
-    return math.sqrt((city1[0] - city2[0]) ** 2 + (city1[1] - city2[1]) ** 2)
+    return np.sqrt((city1[0] - city2[0]) ** 2 + (city1[1] - city2[1]) ** 2)
 
 
 def calculate_distance_matrix(cities):
     """Calculate distance matrix for all city pairs.
 
     Args:
-        cities: List of (x, y) coordinate tuples
+        cities: NumPy array of (x, y) coordinates
 
     Returns:
-        list: 2D list of distances between cities
+        np.ndarray: 2D array of distances between cities
     """
     num_cities = len(cities)
-    # Initialize distance matrix with zeros using nested lists
-    dist_matrix = [[0.0 for _ in range(num_cities)] for _ in range(num_cities)]
+    # Initialize distance matrix
+    dist_matrix = np.zeros((num_cities, num_cities))
 
     for i in range(num_cities):
         for j in range(i + 1, num_cities):
             dist = euclidean_distance(cities[i], cities[j])
-            dist_matrix[i][j] = dist
-            dist_matrix[j][i] = dist
+            dist_matrix[i, j] = dist_matrix[j, i] = dist
 
     return dist_matrix
 
@@ -64,7 +91,7 @@ def calculate_tour_cost(tour, distance_matrix):
 
     Args:
         tour: List of city indices representing the tour
-        distance_matrix: 2D list of distances between cities
+        distance_matrix: NumPy 2D array of distances between cities
 
     Returns:
         float: Total tour distance
@@ -72,11 +99,11 @@ def calculate_tour_cost(tour, distance_matrix):
     cost = 0.0
     num_cities = len(tour)
     for i in range(num_cities):
-        cost += distance_matrix[tour[i]][tour[(i + 1) % num_cities]]
+        cost += distance_matrix[tour[i], tour[(i + 1) % num_cities]]
     return cost
 
 
-# Individual Representation
+# ============= Individual Representation =============
 class Individual:
     """Represents a solution (tour) in the GA population."""
 
@@ -93,7 +120,7 @@ class Individual:
         """Calculate and store the tour cost.
 
         Args:
-            distance_matrix: 2D list of distances between cities
+            distance_matrix: NumPy 2D array of distances between cities
 
         Returns:
             float: The calculated cost
@@ -107,10 +134,15 @@ class Individual:
 
     def __repr__(self):
         """String representation for console output."""
-        return f"Cost: {self.cost:.2f}, Tour: {self.tour}"
+        # Shorten tour representation if too long
+        if len(self.tour) < 15:
+            tour_str = str(self.tour)
+        else:
+            tour_str = str(self.tour[:7] + ["..."] + self.tour[-7:])
+        return f"Tour: {tour_str} Cost: {self.cost:.2f}"
 
 
-# Algorithm Base Class
+# ============= Algorithm Base Class =============
 class TSPAlgorithm(ABC):
     """Abstract base class for TSP solving algorithms."""
 
@@ -118,25 +150,26 @@ class TSPAlgorithm(ABC):
         """Initialize algorithm with problem data.
 
         Args:
-            cities: List of city coordinates
+            cities: NumPy array of city coordinates
             distance_matrix: Pre-calculated distance matrix
         """
         self.cities = cities
         self.distance_matrix = distance_matrix
         self.num_cities = len(cities)
         self.best_individual = None
+        self.cost_history = []
 
     @abstractmethod
     def solve(self, **kwargs):
         """Solve the TSP problem.
 
         Returns:
-            Individual: The best solution found
+            tuple: (best_individual, cost_history)
         """
         pass
 
 
-# Standard Genetic Algorithm
+# ============= Standard Genetic Algorithm =============
 class StandardGA(TSPAlgorithm):
     """Standard Genetic Algorithm for TSP."""
 
@@ -144,7 +177,7 @@ class StandardGA(TSPAlgorithm):
         """Initialize SGA.
 
         Args:
-            cities: List of city coordinates
+            cities: NumPy array of city coordinates
             distance_matrix: Pre-calculated distance matrix
         """
         super().__init__(cities, distance_matrix)
@@ -200,18 +233,17 @@ class StandardGA(TSPAlgorithm):
         parent2_tour = parent2_ind.tour
         size = len(parent1_tour)
 
-        # Initialize child tour with placeholders
+        # Initialize child tour
         child_tour = [-1] * size
 
         # Select random segment from parent1
         start, end = sorted(random.sample(range(size), 2))
         child_tour[start:end + 1] = parent1_tour[start:end + 1]
 
-        # Fill remaining positions from parent2
+        # Fill remaining from parent2
         p2_idx = 0
         for i in range(size):
             if child_tour[i] == -1:
-                # Find next city from parent2 not already in child
                 while parent2_tour[p2_idx] in child_tour[start:end + 1]:
                     p2_idx += 1
                 child_tour[i] = parent2_tour[p2_idx]
@@ -232,7 +264,8 @@ class StandardGA(TSPAlgorithm):
             tour[idx1], tour[idx2] = tour[idx2], tour[idx1]
 
     def solve(self, population_size, generations, crossover_rate,
-              mutation_rate, tournament_size):
+              mutation_rate, tournament_size, elitism_size=0,
+              plotter=None, plot_freq=1):
         """Run the SGA to solve TSP.
 
         Args:
@@ -241,9 +274,12 @@ class StandardGA(TSPAlgorithm):
             crossover_rate: Probability of crossover
             mutation_rate: Probability of mutation
             tournament_size: Size of tournament for selection
+            elitism_size: Number of best individuals to preserve
+            plotter: Optional TSPPlotterSGA instance for visualization
+            plot_freq: Update frequency for live plotting
 
         Returns:
-            Individual: Best solution found
+            tuple: (best_individual, cost_history)
         """
         # Initialize population
         population = self.initialize_population(population_size)
@@ -255,15 +291,27 @@ class StandardGA(TSPAlgorithm):
         # Sort and track best
         population.sort()
         self.best_individual = copy.deepcopy(population[0])
+        self.cost_history = [self.best_individual.cost]
 
-        print(f"\nRunning SGA for {self.num_cities} cities")
-        print(f"Parameters: Pop_Size={population_size}, Gens={generations}, "
-              f"CR={crossover_rate}, MR={mutation_rate}, Tourn_K={tournament_size}")
-        print(f"Initial best: {self.best_individual}")
+        algo_name = "SGA"
+        print(f"\n--- Running {algo_name} for {self.num_cities} cities ---")
+        print(f"Initial best cost: {self.best_individual.cost:.2f}")
+
+        # Initial plot update if plotter provided
+        if plotter:
+            plotter.update_live_route_plot(
+                self.best_individual.tour, 0,
+                self.best_individual.cost, plot_freq
+            )
 
         # Evolution loop
         for gen in range(1, generations + 1):
             new_population = []
+
+            # Apply elitism
+            if elitism_size > 0:
+                elites = copy.deepcopy(population[:elitism_size])
+                new_population.extend(elites)
 
             # Create mating pool
             mating_pool = self.selection_tournament(population, tournament_size)
@@ -281,7 +329,6 @@ class StandardGA(TSPAlgorithm):
                 if random.random() < crossover_rate:
                     child = self.crossover_ordered(parent1, parent2)
                 else:
-                    # Clone one parent if no crossover
                     child = copy.deepcopy(random.choice([parent1, parent2]))
 
                 # Apply mutation
@@ -299,5 +346,27 @@ class StandardGA(TSPAlgorithm):
             if population[0].cost < self.best_individual.cost:
                 self.best_individual = copy.deepcopy(population[0])
 
-        print(f"SGA Final best: {self.best_individual}")
-        return self.best_individual
+            self.cost_history.append(self.best_individual.cost)
+
+            # Progress output
+            if gen % 10 == 0 or gen == generations:
+                print(f"{algo_name} Gen {gen}/{generations} - Best Cost: {self.best_individual.cost:.2f}")
+
+            # Update plots if plotter provided
+            if plotter:
+                plotter.update_live_route_plot(
+                    self.best_individual.tour, gen,
+                    self.best_individual.cost, plot_freq
+                )
+                plotter.update_convergence_plot(self.cost_history)
+
+        print(f"{algo_name} Final Best Tour: {self.best_individual.tour} with Cost: {self.best_individual.cost:.2f}")
+
+        # Final plot update
+        if plotter:
+            plotter.update_live_route_plot(
+                self.best_individual.tour, -1,
+                self.best_individual.cost, plot_freq
+            )
+
+        return self.best_individual, self.cost_history
