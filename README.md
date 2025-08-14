@@ -1,64 +1,74 @@
 # TSP Genetic Algorithm
 
-An implementation of a Genetic Algorithm (GA) for solving the Traveling Salesman Problem (TSP) with real-time visualization capabilities.
+Solving the Traveling Salesman Problem (TSP) by comparing a Standard Genetic Algorithm (SGA) with a Hybrid Genetic Algorithm - Ant Colony Optimization (HGA-ACO).
 
-## New Features in V2
-- **Live plotting**: Real-time visualization of route evolution during GA execution
-- **Dual plot display**: 
-  - Best route visualization with cities and paths
-  - Fitness convergence graph showing cost improvement over generations
-- **Configurable update frequency**: Control plotting performance for different problem sizes
-- **Final route display**: Clear visualization of the best solution found
-- **Interactive matplotlib interface**: Pan, zoom, and examine results in detail
+## New Features in V3
+- **Hybrid GA-ACO Algorithm**: Combines genetic operators with ant colony optimization
+- **Pheromone-based guidance**: ACO pheromone trails guide solution construction
+- **Algorithm comparison**: Side-by-side comparison of SGA vs HGA-ACO
+- **Dual algorithm visualization**: Separate route plots for each algorithm
+- **Performance metrics**: Detailed comparison of solution quality and execution time
+- **Modular algorithm structure**: Algorithms organized in a separate module
 
 ## Features
-- Standard Genetic Algorithm (SGA) with elitism
-- Random city generation in configurable grid
-- Tournament selection operator
-- Ordered crossover (OX) operator
-- Swap mutation operator
-- Real-time visualization of algorithm progress
+- Two algorithm implementations:
+  - **SGA**: Standard Genetic Algorithm with elitism
+  - **HGA-ACO**: Hybrid approach combining GA and ACO strategies
+- Real-time visualization of both algorithms
+- Comprehensive performance comparison
+- Configurable parameters for both algorithms
+- Reproducible results with seeded random generation
 - Adaptive parameter scaling based on problem size
-- Execution time measurement
 
 ## Project Structure
 ```
-tsp_ga/
-├── main.py          # Entry point with configuration and adaptive parameters
-├── ga.py            # GA components and algorithms with NumPy optimizations
-├── visualization.py # Real-time plotting utilities for TSP visualization
+TSP-solvers/
+├── main.py           # Entry point with configuration and comparison logic
+├── core.py           # Core components (cities, distance, individual)
+├── visualization.py  # Plotting utilities for algorithm comparison
+├── algorithms/       # Algorithm implementations module
+│   ├── __init__.py
+│   ├── base.py       # Abstract base class for TSP algorithms
+│   ├── sga.py        # Standard Genetic Algorithm
+│   └── hga_aco.py    # Hybrid GA-ACO Algorithm
 ├── requirements.txt
 └── README.md
 ```
 
 ## Code Organization
-- **main.py**: Contains the main execution logic and configuration
-  - Problem settings (number of cities, grid dimensions, seed)
-  - SGA default parameters
-  - Visualization settings with adaptive update frequency
-  - Adaptive parameter function for problem size scaling
-  - Main function with timing, plotting orchestration, and results reporting
-  
-- **ga.py**: Consolidated GA components including:
-  - City management (fixed and random generation with NumPy)
-  - Distance calculations using NumPy arrays
-  - Individual class with improved representation
-  - Abstract TSP algorithm base class with cost history tracking
-  - Standard GA with elitism support and visualization hooks
-  
-- **visualization.py**: Real-time plotting utilities including:
-  - TSPPlotterSGA class for dual-plot visualization
-  - Live route plot showing best tour evolution
-  - Convergence plot showing fitness improvement
-  - Interactive matplotlib interface
-  - Final route and results display
+- **main.py**: Contains main execution logic and configuration
+  - Problem settings (cities, grid dimensions, seed)
+  - Algorithm parameters for both SGA and HGA-ACO
+  - Adaptive parameter scaling based on problem size
+  - Algorithm execution and comparison logic
+  - Results reporting and performance metrics
 
+- **core.py**: Consolidated core components
+  - City management (fixed and random generation)
+  - Distance calculations using NumPy
+  - Individual class for solution representation
+
+- **visualization.py**: Plotting utilities
+  - TSPPlotter class for dual-algorithm visualization
+  - Live route plotting for both algorithms
+  - Convergence comparison graphs
+  - Final route comparison display
+
+- **algorithms/** module:
+  - **base.py**: Abstract TSPAlgorithm base class
+  - **sga.py**: Standard GA with tournament selection, ordered crossover, and swap mutation
+  - **hga_aco.py**: Hybrid algorithm combining:
+    - GA operators (crossover, mutation, selection)
+    - ACO pheromone-based tour construction
+    - Pheromone update mechanisms
+
+   
 ## Configuration
 Edit the configuration parameters directly in `main.py`:
 
 ### Problem Settings
 - `NUM_CITIES`: Number of cities to generate (default: 50)
-- `CITY_SEED`: Random seed for reproducible results (default: 1)
+- `CITY_SEED`: Random seed for reproducibility (default: 1)
 - `CITY_WIDTH`: Grid width for city generation (default: 100)
 - `CITY_HEIGHT`: Grid height for city generation (default: 100)
 
@@ -67,28 +77,25 @@ Edit the configuration parameters directly in `main.py`:
 - `DEFAULT_SGA_GENERATIONS`: Number of generations (default: 1000)
 - `DEFAULT_SGA_CROSSOVER_RATE`: Crossover probability (default: 0.85)
 - `DEFAULT_SGA_MUTATION_RATE`: Mutation probability (default: 0.15)
-- `DEFAULT_SGA_ELITISM_SIZE`: Number of elites to preserve (default: 5)
-- `DEFAULT_SGA_TOURNAMENT_K`: Tournament selection size (default: 3)
+- `DEFAULT_SGA_ELITISM_SIZE`: Number of elites (default: 5)
+- `DEFAULT_SGA_TOURNAMENT_K`: Tournament size (default: 3)
+
+### HGA-ACO Parameters
+- `DEFAULT_HGA_POP_SIZE`: Population size (default: 100)
+- `DEFAULT_HGA_GENERATIONS`: Number of generations (default: 250)
+- `DEFAULT_HGA_GA_CROSSOVER_RATE`: GA crossover rate (default: 0.7)
+- `DEFAULT_HGA_ACO_CONTRIBUTION_RATE`: ACO individual proportion (default: 0.5)
+- `DEFAULT_HGA_MUTATION_RATE`: Mutation probability (default: 0.15)
+- `DEFAULT_HGA_ELITISM_SIZE`: Number of elites (default: 5)
+- `DEFAULT_HGA_TOURNAMENT_K`: Tournament size (default: 3)
+
+### ACO-specific Parameters
+- `DEFAULT_HGA_ALPHA`: Pheromone influence (default: 1.0)
+- `DEFAULT_HGA_BETA`: Heuristic influence (default: 3.0)
+- `DEFAULT_HGA_EVAPORATION_RATE`: Pheromone evaporation (default: 0.3)
+- `DEFAULT_HGA_Q_PHEROMONE`: Pheromone deposit constant (default: 100.0)
+- `DEFAULT_HGA_INITIAL_PHEROMONE`: Initial pheromone level (default: 0.1)
+- `DEFAULT_HGA_BEST_N_DEPOSIT`: Number of best ants depositing (default: 5)
 
 ### Visualization Settings
-- `LIVE_PLOT_UPDATE_FREQ`: Update plot every N generations (default: 1, set to 0 to disable)
-
-### Display Settings
-- `VERBOSE`: Enable verbose output (default: True)
-- `PROGRESS_FREQUENCY`: Print progress every N generations (default: 10)
-
-## Adaptive Parameters
-The algorithm automatically adjusts parameters based on problem size:
-- **Small problems (≤50 cities)**: 
-  - 750 generations, 100 population
-  - Plot update every generation
-- **Medium problems (≤100 cities)**: 
-  - 1500 generations, 200 population, 10 elites
-  - Plot update every 5 generations
-- **Large problems (>100 cities)**: 
-  - 5000 generations, 250 population, 15 elites
-  - Plot update every 10 generations
-
-## Dependencies
-- numpy>=1.20.0
-- matplotlib>=3.3.0
+- `LIVE_PLOT_UPDATE_FREQ`: Update frequency for live plotting (default: 1)
