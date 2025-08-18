@@ -1,7 +1,7 @@
 """Hybrid Genetic Algorithm - Ant Colony Optimization implementation.
 
 Author: gumocimo
-Date: 13/08/2025
+Date: 18/08/2025
 """
 
 import random
@@ -250,6 +250,9 @@ class HybridGA_ACO(TSPAlgorithm):
                 self.best_individual.tour, algo_name, 0,
                 self.best_individual.cost, plot_freq
             )
+            plotter.update_pheromone_heatmap(
+                self.pheromone_matrix, 0, plot_freq
+            )
 
         # Evolution loop
         for gen in range(1, generations + 1):
@@ -319,14 +322,20 @@ class HybridGA_ACO(TSPAlgorithm):
                     self.best_individual.cost, plot_freq
                 )
                 plotter.update_convergence_plot(self.cost_history, algo_name, "green")
+                plotter.update_pheromone_heatmap(
+                    self.pheromone_matrix, gen, plot_freq
+                )
 
         print(f"{algo_name} Final Best Tour: {self.best_individual.tour} with Cost: {self.best_individual.cost:.2f}")
 
         # Final plot update
         if plotter:
             plotter.update_live_route_plot(
-                self.best_individual.tour, algo_name, generations,
+                self.best_individual.tour, algo_name, -1,
                 self.best_individual.cost, plot_freq
+            )
+            plotter.update_pheromone_heatmap(
+                self.pheromone_matrix, -1, plot_freq
             )
 
         return self.best_individual, self.cost_history
